@@ -1,0 +1,2007 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>London → Karachi · June 2026</title>
+<meta name="theme-color" content="#F5F0E8">
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: light only;
+    --bg: #F5F0E8;
+    --bg-soft: #EDE6DA;
+    --bg-card: #FAF6EF;
+    --ink: #1A1814;
+    --ink-soft: #4A453E;
+    --muted: #8B8478;
+    --line: #DDD4C2;
+    --accent: #E0653D;
+    --accent-soft: #F4A37E;
+    --red: #D63A1F;
+    --red-glow: rgba(214, 58, 31, 0.45);
+    --map-land: #E8DFCC;
+    --map-land-2: #DFD4BC;
+  }
+  html { color-scheme: light only; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: #F5F0E8 !important;
+    color: #1A1814 !important;
+    font-family: 'Geist', -apple-system, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+    overflow-x: hidden;
+  }
+  /* Hide page content until splash is done — prevents flash */
+  .container { visibility: hidden; opacity: 0; transition: opacity 0.5s ease; }
+  body.ready .container { visibility: visible; opacity: 1; }
+  body:not(.ready) { overflow: hidden; }
+
+  /* ============================================
+     INTRO SPLASH — Kulsoom Airlines
+     ============================================ */
+  .splash {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(180deg, #F5F0E8 0%, #EDE6DA 60%, #DFD4BC 100%);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    transition: opacity 0.8s ease, visibility 0.8s ease;
+  }
+  .splash.gone { opacity: 0; visibility: hidden; pointer-events: none; }
+
+  /* Cloud layers for depth */
+  .cloud {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.55);
+    border-radius: 50%;
+    filter: blur(8px);
+  }
+  .cloud-1 { width: 240px; height: 80px; top: 22%; left: -300px; animation: cloudDrift1 7s ease-out forwards; }
+  .cloud-2 { width: 320px; height: 100px; top: 58%; right: -380px; animation: cloudDrift2 7.5s ease-out forwards; opacity: 0.45; }
+  .cloud-3 { width: 180px; height: 60px; top: 38%; left: 30%; opacity: 0; animation: cloudFade 6s ease-in-out 0.3s forwards; }
+  .cloud-4 { width: 280px; height: 90px; bottom: 18%; left: 10%; opacity: 0; animation: cloudFade 7s ease-in-out 0.8s forwards; }
+  @keyframes cloudDrift1 {
+    0% { transform: translateX(0); opacity: 0; }
+    20% { opacity: 1; }
+    100% { transform: translateX(140vw); opacity: 0.6; }
+  }
+  @keyframes cloudDrift2 {
+    0% { transform: translateX(0); opacity: 0; }
+    20% { opacity: 0.5; }
+    100% { transform: translateX(-140vw); opacity: 0.3; }
+  }
+  @keyframes cloudFade {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Title — JS triggers via .show class */
+  .splash-title {
+    position: relative;
+    z-index: 5;
+    text-align: center;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 1.4s cubic-bezier(0.16, 1, 0.3, 1), transform 1.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .splash-title.show { opacity: 1; transform: translateY(0); }
+  .splash-title .small {
+    display: block;
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+  .splash-title .big {
+    font-family: 'Instrument Serif', serif;
+    font-size: clamp(48px, 11vw, 88px);
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  .splash-title .big em { font-style: italic; color: var(--accent); }
+  .splash-title .tag {
+    display: block;
+    margin-top: 18px;
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: 16px;
+    color: var(--ink-soft);
+  }
+
+  /* The big plane — JS driven for smooth single camera motion */
+  .splash-plane {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1300px;
+    max-width: 220vw;
+    height: auto;
+    transform: translate(-50%, -50%) scale(0.05);
+    opacity: 0;
+    will-change: transform, opacity, filter;
+  }
+  .splash-plane.rear { opacity: 0; }
+
+  /* Window detail — zoomed view */
+  .splash-window {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 600px;
+    max-width: 90vw;
+    height: auto;
+    aspect-ratio: 1 / 1;
+    transform: translate(-50%, -50%) scale(0.02);
+    opacity: 0;
+    will-change: transform, opacity;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 30px 80px rgba(26, 24, 20, 0.25);
+  }
+
+  /* Ambient background — page clouds + shooting stars */
+  .ambient {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
+  .amb-cloud {
+    position: absolute;
+    background: radial-gradient(ellipse at center, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.15) 40%, transparent 70%);
+    border-radius: 50%;
+    filter: blur(20px);
+    opacity: 0.5;
+  }
+  .amb-cloud-1 {
+    width: 480px; height: 160px;
+    top: 8%; left: -200px;
+    animation: ambDrift1 60s linear infinite, ambBreathe 8s ease-in-out infinite;
+  }
+  .amb-cloud-2 {
+    width: 380px; height: 130px;
+    top: 32%; right: -180px;
+    animation: ambDrift2 75s linear infinite, ambBreathe 11s ease-in-out infinite 2s;
+    opacity: 0.4;
+  }
+  .amb-cloud-3 {
+    width: 420px; height: 140px;
+    bottom: 22%; left: 20%;
+    animation: ambDrift1 90s linear infinite 10s, ambBreathe 13s ease-in-out infinite 1s;
+    opacity: 0.35;
+  }
+  .amb-cloud-4 {
+    width: 320px; height: 110px;
+    top: 65%; left: -150px;
+    animation: ambDrift1 110s linear infinite 30s, ambBreathe 10s ease-in-out infinite 3s;
+    opacity: 0.3;
+  }
+  @keyframes ambDrift1 {
+    from { transform: translateX(0); }
+    to { transform: translateX(calc(100vw + 400px)); }
+  }
+  @keyframes ambDrift2 {
+    from { transform: translateX(0); }
+    to { transform: translateX(calc(-100vw - 400px)); }
+  }
+  @keyframes ambBreathe {
+    0%, 100% { opacity: 0.3; transform-origin: center; }
+    50% { opacity: 0.55; }
+  }
+  @keyframes ambBreathe2 {
+    0%, 100% { opacity: 0.25; }
+    50% { opacity: 0.5; }
+  }
+
+  /* Shooting stars */
+  .star {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), white);
+    border-radius: 50%;
+    opacity: 0;
+    box-shadow: 0 0 6px var(--accent);
+  }
+  .star::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -80px;
+    width: 80px; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(224, 101, 61, 0.6));
+    border-radius: 1px;
+  }
+  .star-1 { top: 18%; left: 60%; animation: shootStar 7s ease-in-out infinite 3s; }
+  .star-2 { top: 42%; left: 25%; animation: shootStar 9s ease-in-out infinite 8s; }
+  .star-3 { top: 70%; left: 75%; animation: shootStar 8s ease-in-out infinite 14s; }
+  @keyframes shootStar {
+    0% { opacity: 0; transform: translate(0, 0); }
+    5% { opacity: 1; }
+    20% { opacity: 1; transform: translate(180px, 60px); }
+    25% { opacity: 0; transform: translate(220px, 75px); }
+    100% { opacity: 0; transform: translate(220px, 75px); }
+  }
+
+  /* Ensure content stays above ambient */
+  .container { position: relative; z-index: 1; }
+
+  /* Contrail behind plane */
+  .contrail {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 600px;
+    height: 8px;
+    transform: translate(-100%, -50%);
+    opacity: 0;
+    transition: opacity 0.6s ease;
+    pointer-events: none;
+  }
+  .contrail.show { opacity: 0.7; }
+  .contrail::before, .contrail::after {
+    content: '';
+    position: absolute;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.7) 100%);
+    border-radius: 4px;
+  }
+  .contrail::before { top: 0; left: 0; width: 100%; height: 3px; }
+  .contrail::after { bottom: 0; left: 0; width: 100%; height: 3px; opacity: 0.6; }
+
+  .skip {
+    position: absolute;
+    bottom: 24px; right: 24px;
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 8px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    opacity: 0;
+    animation: fadeIn 0.4s ease 1s forwards;
+    z-index: 10;
+  }
+  .skip:hover { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  @keyframes fadeIn { to { opacity: 1; } }
+
+  /* ============================================
+     MAIN CONTENT
+     ============================================ */
+  .container { max-width: 760px; margin: 0 auto; padding: 28px 20px 80px; }
+
+  header { padding-bottom: 24px; margin-bottom: 24px; border-bottom: 1px solid var(--line); }
+  .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; }
+  .brand { font-family: 'Instrument Serif', serif; font-style: italic; font-size: 18px; }
+  .brand::before { content: '✦'; color: var(--accent); margin-right: 6px; }
+  .date-tag {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    padding: 5px 10px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+  }
+  h1 {
+    font-family: 'Instrument Serif', serif;
+    font-size: clamp(42px, 10vw, 72px);
+    line-height: 0.96;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    margin-bottom: 16px;
+  }
+  h1 em { font-style: italic; color: var(--accent); }
+  h1 .arrow { display: inline-block; transform: translateY(-6px); margin: 0 6px; color: var(--accent); font-style: italic; }
+  .subtitle { font-size: 15px; color: var(--ink-soft); margin-bottom: 20px; max-width: 540px; }
+
+  .trip-stats {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 16px 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 24px;
+  }
+  .stat { display: flex; flex-direction: column; gap: 2px; }
+  .stat-label {
+    font-family: 'Geist Mono', monospace;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+  }
+  .stat-value {
+    font-family: 'Instrument Serif', serif;
+    font-size: 20px;
+    font-style: italic;
+    line-height: 1;
+  }
+
+  .filters {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+  .pill {
+    background: var(--bg-soft);
+    border: 1px solid transparent;
+    color: var(--ink-soft);
+    padding: 8px 14px;
+    font-family: 'Geist', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 999px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+  }
+  .pill:hover { background: var(--bg-card); border-color: var(--line); }
+  .pill.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+  /* CARDS */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    margin-bottom: 10px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    animation: rise 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .card.featured { border: 2px solid var(--accent); box-shadow: 0 4px 16px rgba(224, 101, 61, 0.08); }
+  .card.expanded { box-shadow: 0 8px 28px rgba(26, 24, 20, 0.08); }
+  .card.hidden { display: none; }
+
+  .card-summary {
+    padding: 16px 18px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .summary-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .summary-left { flex: 1; min-width: 0; display: flex; gap: 12px; align-items: center; }
+
+  /* AIRLINE BADGES — original designs evoking each brand's identity */
+  .airline-logo {
+    width: 46px; height: 46px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .airline-logo svg { width: 100%; height: 100%; }
+
+  .airline-info { min-width: 0; flex: 1; }
+  .top-pick-badge {
+    background: var(--accent);
+    color: var(--bg);
+    font-family: 'Geist Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    padding: 3px 8px;
+    border-radius: 999px;
+    display: inline-block;
+    margin-bottom: 6px;
+  }
+  .airline {
+    font-family: 'Instrument Serif', serif;
+    font-size: 22px;
+    font-weight: 400;
+    line-height: 1.1;
+    margin-bottom: 2px;
+    letter-spacing: -0.01em;
+  }
+  .route {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .route .dot {
+    display: inline-block;
+    width: 3px; height: 3px;
+    background: var(--accent);
+    border-radius: 50%;
+    vertical-align: middle;
+    margin: 0 5px;
+  }
+  .summary-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .price {
+    font-family: 'Instrument Serif', serif;
+    font-size: 30px;
+    font-style: italic;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .chevron {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--bg-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s ease, background 0.2s ease;
+    flex-shrink: 0;
+  }
+  .chevron::after {
+    content: '';
+    width: 7px; height: 7px;
+    border-right: 1.5px solid var(--ink);
+    border-bottom: 1.5px solid var(--ink);
+    transform: rotate(45deg) translate(-1px, -1px);
+  }
+  .card.expanded .chevron { background: var(--accent); transform: rotate(180deg); }
+  .card.expanded .chevron::after { border-color: var(--bg); }
+
+  .card-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .card.expanded .card-body { max-height: 1200px; }
+  .card-body-inner {
+    padding: 0 18px 18px;
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: opacity 0.3s ease 0.15s, transform 0.3s ease 0.15s;
+  }
+  .card.expanded .card-body-inner { opacity: 1; transform: translateY(0); }
+
+  /* ANIMATED MINI MAP inside expanded body */
+  .flight-map {
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .flight-map svg { width: 100%; height: auto; display: block; }
+  .fm-land { fill: var(--map-land); stroke: var(--line); stroke-width: 0.4; vector-effect: non-scaling-stroke; }
+  .fm-land-2 { fill: var(--map-land-2); stroke: var(--line); stroke-width: 0.3; vector-effect: non-scaling-stroke; opacity: 0.85; }
+  .fm-route {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 1.8;
+    vector-effect: non-scaling-stroke;
+    stroke-linecap: round;
+  }
+  .fm-route.dotted { stroke-dasharray: 3 3; opacity: 0.35; }
+  .fm-dot {
+    fill: var(--red);
+    filter: drop-shadow(0 0 3px var(--red-glow)) drop-shadow(0 0 6px var(--red-glow));
+  }
+  .fm-pulse {
+    fill: none;
+    stroke: var(--red);
+    stroke-width: 1.5;
+    opacity: 0;
+    animation: fmPulse 1.6s ease-out infinite;
+    vector-effect: non-scaling-stroke;
+  }
+  @keyframes fmPulse {
+    0% { r: 2; opacity: 0.85; }
+    100% { r: 16; opacity: 0; }
+  }
+  .fm-label {
+    font-family: 'Geist Mono', monospace;
+    font-size: 9px;
+    fill: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 500;
+  }
+  .fm-time {
+    font-family: 'Geist Mono', monospace;
+    font-size: 6.5px;
+    fill: var(--muted);
+  }
+  .fm-plane { fill: var(--accent); filter: drop-shadow(0 1px 1.5px rgba(224, 101, 61, 0.4)); }
+  .fm-bubble-group { opacity: 0; transition: opacity 0.3s ease; pointer-events: none; }
+  .fm-bubble-group.visible { opacity: 1; }
+  .fm-bubble-bg { fill: var(--ink); }
+  .fm-bubble-text {
+    font-family: 'Geist Mono', monospace;
+    font-size: 17px;
+    fill: var(--bg);
+    font-weight: 500;
+  }
+  .fm-bubble-text.title {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: 22px;
+    fill: var(--accent-soft);
+  }
+
+  .specs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px 16px;
+    padding: 4px 0 16px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 14px;
+  }
+  .spec-label {
+    font-family: 'Geist Mono', monospace;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 4px;
+  }
+  .spec-value { font-size: 14px; font-weight: 500; }
+  .verdict {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: 16px;
+    line-height: 1.4;
+    color: var(--ink-soft);
+    margin-bottom: 16px;
+  }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn {
+    flex: 1;
+    min-width: 130px;
+    background: var(--ink);
+    color: var(--bg);
+    text-decoration: none;
+    padding: 12px 16px;
+    text-align: center;
+    font-family: 'Geist', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 999px;
+    transition: all 0.2s ease;
+    border: 1px solid var(--ink);
+  }
+  .btn:hover, .btn:active { background: var(--accent); border-color: var(--accent); }
+  .btn.secondary { background: transparent; color: var(--ink); }
+  .btn.secondary:hover, .btn.secondary:active { background: var(--ink); color: var(--bg); }
+
+  .section-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: 28px;
+    font-weight: 400;
+    font-style: italic;
+    margin: 44px 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .section-sub { font-size: 13px; color: var(--ink-soft); margin-bottom: 16px; margin-top: -8px; }
+  .agg-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px;
+  }
+  .agg-link {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 13px 14px;
+    text-decoration: none;
+    color: var(--ink);
+    font-family: 'Geist', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .agg-link:hover { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .agg-link::after { content: '↗'; color: var(--accent); font-size: 14px; }
+
+  .warnings {
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 24px 22px;
+    margin-top: 36px;
+  }
+  .warnings h2 {
+    font-family: 'Instrument Serif', serif;
+    font-size: 26px;
+    font-style: italic;
+    margin-bottom: 14px;
+    font-weight: 400;
+  }
+  .warnings h2::before { content: '⚠ '; color: var(--accent); font-style: normal; }
+  .warnings ol { list-style: none; counter-reset: warn; }
+  .warnings li {
+    counter-increment: warn;
+    padding: 12px 0 12px 32px;
+    border-bottom: 1px solid var(--line);
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+    position: relative;
+  }
+  .warnings li::before {
+    content: counter(warn, decimal-leading-zero);
+    position: absolute;
+    left: 0; top: 12px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .warnings li:last-child { border-bottom: none; }
+  .warnings strong { font-weight: 600; }
+
+  footer {
+    margin-top: 48px;
+    padding-top: 22px;
+    border-top: 1px solid var(--line);
+    font-family: 'Geist', sans-serif;
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+  }
+  footer .accent { color: var(--accent); }
+  footer .serif-it { font-family: 'Instrument Serif', serif; font-style: italic; }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 520px) {
+    .container { padding: 22px 14px 60px; }
+    .price { font-size: 24px; }
+    .airline { font-size: 20px; }
+    .airline-logo { width: 40px; height: 40px; }
+    .btn { min-width: 100%; }
+    .stat-value { font-size: 17px; }
+  }
+
+  @media (prefers-color-scheme: dark) {
+    html, body { background: #F5F0E8 !important; color: #1A1814 !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================
+     SPLASH — Kulsoom Airlines fullscreen intro
+     ============================================ -->
+<div class="splash" id="splash">
+  <div class="cloud cloud-1"></div>
+  <div class="cloud cloud-2"></div>
+  <div class="cloud cloud-3"></div>
+  <div class="cloud cloud-4"></div>
+  <div class="contrail"></div>
+
+  <!-- SIDE-PROFILE Boeing-style aircraft (flies horizontally across screen) -->
+  <svg class="splash-plane front" id="plane-front" viewBox="0 0 1200 400" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="f-fuse" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#FDFAF4"/>
+        <stop offset="45%" stop-color="#F5F0E8"/>
+        <stop offset="85%" stop-color="#DDD0B3"/>
+        <stop offset="100%" stop-color="#B8A688"/>
+      </linearGradient>
+      <linearGradient id="f-fuse-shadow" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#1A1814" stop-opacity="0"/>
+        <stop offset="100%" stop-color="#1A1814" stop-opacity="0.18"/>
+      </linearGradient>
+      <linearGradient id="f-wing-top" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#F0E8D8"/>
+        <stop offset="100%" stop-color="#C4B89C"/>
+      </linearGradient>
+      <linearGradient id="f-wing-under" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#8C7E63"/>
+        <stop offset="100%" stop-color="#6B5F4A"/>
+      </linearGradient>
+      <linearGradient id="f-tail-fin" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#E0653D"/>
+        <stop offset="100%" stop-color="#A03E1F"/>
+      </linearGradient>
+      <linearGradient id="f-engine" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#3A3530"/>
+        <stop offset="50%" stop-color="#1A1814"/>
+        <stop offset="100%" stop-color="#0A0908"/>
+      </linearGradient>
+      <radialGradient id="f-engine-intake" cx="0.5" cy="0.5" r="0.5">
+        <stop offset="0%" stop-color="#0A0908"/>
+        <stop offset="60%" stop-color="#2A2520"/>
+        <stop offset="100%" stop-color="#5A5045"/>
+      </radialGradient>
+      <radialGradient id="f-cockpit" cx="0.3" cy="0.3" r="0.8">
+        <stop offset="0%" stop-color="#88C0E0" stop-opacity="0.6"/>
+        <stop offset="50%" stop-color="#2C3540"/>
+        <stop offset="100%" stop-color="#0A0908"/>
+      </radialGradient>
+    </defs>
+
+    <!-- Ground shadow -->
+    <ellipse cx="600" cy="370" rx="420" ry="10" fill="#1A1814" opacity="0.08"/>
+
+    <!-- VERTICAL TAIL FIN (rear) -->
+    <path d="M 215,195 L 240,80 L 295,65 L 335,195 Z" fill="url(#f-tail-fin)"/>
+    <!-- Tail fin highlight -->
+    <path d="M 250,90 L 290,72 L 300,140 L 270,148 Z" fill="#FAF6EF" opacity="0.15"/>
+    <!-- Tail K logo -->
+    <g transform="translate(255, 110)">
+      <path d="M 0,0 L 0,28 M 0,14 L 14,0 M 0,14 L 14,28" stroke="#FAF6EF" stroke-width="3" fill="none" stroke-linecap="round"/>
+    </g>
+    <!-- Horizontal stabilisers (rear) -->
+    <path d="M 280,190 L 170,200 L 150,215 L 280,215 Z" fill="url(#f-wing-top)" stroke="#8C7E63" stroke-width="0.5"/>
+    <path d="M 280,205 L 280,230 L 335,228 L 335,210 Z" fill="url(#f-wing-under)" opacity="0.7"/>
+
+    <!-- BACK / FAR WING (behind fuselage, smaller) -->
+    <path d="M 600,200 L 460,310 L 530,328 L 650,220 Z" fill="url(#f-wing-top)" stroke="#8C7E63" stroke-width="0.5" opacity="0.55"/>
+
+    <!-- FUSELAGE — long, tapered Boeing 777 silhouette -->
+    <path d="M 250,205 Q 250,178 305,170 L 990,165 Q 1075,168 1125,195 Q 1085,225 990,228 L 305,235 Q 250,232 250,205 Z" fill="url(#f-fuse)" stroke="#A89A7E" stroke-width="0.6"/>
+    <!-- Belly shadow -->
+    <path d="M 305,235 L 990,228 Q 1080,228 1120,202 Q 1080,225 990,222 L 305,232 Z" fill="url(#f-fuse-shadow)"/>
+    <!-- Top highlight -->
+    <path d="M 305,170 L 990,165 Q 1055,168 1090,180 Q 1050,175 990,176 L 305,180 Z" fill="#FFFFFF" opacity="0.35"/>
+
+    <!-- NOSE — rounded cone -->
+    <path d="M 990,165 Q 1080,168 1130,190 Q 1148,200 1142,210 Q 1135,225 1115,228 Q 1075,232 990,228 Q 1045,222 1065,205 Q 1050,180 990,165 Z" fill="#EEEAE0" stroke="#A89A7E" stroke-width="0.5"/>
+
+    <!-- COCKPIT WINDOWS -->
+    <path d="M 1050,182 Q 1080,179 1110,190 Q 1120,198 1115,208 Q 1095,214 1060,211 Q 1048,198 1050,182 Z" fill="url(#f-cockpit)" stroke="#1A1814" stroke-width="0.8"/>
+    <!-- Window frame divisions -->
+    <path d="M 1066,182 L 1068,212" stroke="#1A1814" stroke-width="0.6" opacity="0.7"/>
+    <path d="M 1082,180 L 1086,213" stroke="#1A1814" stroke-width="0.6" opacity="0.7"/>
+    <path d="M 1098,184 L 1102,213" stroke="#1A1814" stroke-width="0.6" opacity="0.7"/>
+    <!-- Window glint -->
+    <path d="M 1058,186 Q 1080,183 1104,192" stroke="#B8DCEC" stroke-width="0.8" fill="none" opacity="0.8"/>
+
+    <!-- LIVERY STRIPE -->
+    <path d="M 305,205 L 990,200" stroke="#E0653D" stroke-width="4" stroke-linecap="round"/>
+    <path d="M 305,213 L 990,208" stroke="#1A1814" stroke-width="1.2" opacity="0.45"/>
+
+    <!-- PASSENGER WINDOWS — long row -->
+    <g fill="#1A1814">
+      <rect x="340" y="190" width="8" height="4" rx="1.5"/>
+      <rect x="360" y="190" width="8" height="4" rx="1.5"/>
+      <rect x="380" y="190" width="8" height="4" rx="1.5"/>
+      <rect x="400" y="190" width="8" height="4" rx="1.5"/>
+      <rect x="420" y="190" width="8" height="4" rx="1.5"/>
+      <rect x="440" y="190" width="8" height="4" rx="1.5"/>
+      <rect x="460" y="190" width="8" height="4" rx="1.5"/>
+      <rect x="480" y="190" width="8" height="4" rx="1.5"/>
+      <rect x="500" y="190" width="8" height="4" rx="1.5"/>
+      <rect x="520" y="190" width="8" height="4" rx="1.5"/>
+      <rect x="540" y="190" width="8" height="4" rx="1.5"/>
+      <rect x="560" y="190" width="8" height="4" rx="1.5"/>
+      <rect x="580" y="190" width="8" height="4" rx="1.5"/>
+      <rect x="600" y="190" width="8" height="4" rx="1.5"/>
+      <rect x="620" y="190" width="8" height="4" rx="1.5"/>
+      <rect x="640" y="190" width="8" height="4" rx="1.5"/>
+      <rect x="660" y="190" width="8" height="4" rx="1.5"/>
+      <rect x="680" y="190" width="8" height="4" rx="1.5"/>
+      <rect x="700" y="190" width="8" height="4" rx="1.5"/>
+      <rect x="720" y="190" width="8" height="4" rx="1.5"/>
+      <rect x="740" y="190" width="8" height="4" rx="1.5"/>
+      <rect x="760" y="190" width="8" height="4" rx="1.5"/>
+      <rect x="780" y="190" width="8" height="4" rx="1.5"/>
+      <rect x="800" y="190" width="8" height="4" rx="1.5"/>
+      <rect x="820" y="190" width="8" height="4" rx="1.5"/>
+      <rect x="840" y="190" width="8" height="4" rx="1.5"/>
+      <rect x="860" y="190" width="8" height="4" rx="1.5"/>
+      <rect x="880" y="190" width="8" height="4" rx="1.5"/>
+      <rect x="900" y="190" width="8" height="4" rx="1.5"/>
+      <rect x="920" y="190" width="8" height="4" rx="1.5"/>
+      <rect x="940" y="190" width="8" height="4" rx="1.5"/>
+      <rect x="960" y="190" width="8" height="4" rx="1.5"/>
+    </g>
+
+    <!-- "Kulsoom" titles on fuselage -->
+    <text x="640" y="186" text-anchor="middle" font-family="Instrument Serif, serif" font-style="italic" font-size="14" fill="#1A1814" font-weight="400" letter-spacing="2.5">Kulsoom</text>
+
+    <!-- MAIN WING (foreground, swept back) -->
+    <!-- wing root connecting to fuselage -->
+    <path d="M 670,230 L 745,232 L 510,380 L 440,385 Z" fill="url(#f-wing-under)" opacity="0.85"/>
+    <!-- wing top surface -->
+    <path d="M 660,215 L 750,218 L 525,365 L 435,365 Z" fill="url(#f-wing-top)" stroke="#8C7E63" stroke-width="0.6"/>
+    <!-- wing panel lines -->
+    <path d="M 660,222 L 475,355" stroke="#8C7E63" stroke-width="0.5" opacity="0.5"/>
+    <path d="M 695,220 L 515,360" stroke="#8C7E63" stroke-width="0.4" opacity="0.4"/>
+    <!-- WINGLET (vertical tip) -->
+    <path d="M 435,365 L 422,342 L 440,342 L 452,365 Z" fill="url(#f-tail-fin)" opacity="0.9"/>
+
+    <!-- ENGINE under main wing — Boeing GE90-style nacelle -->
+    <ellipse cx="555" cy="338" rx="55" ry="20" fill="url(#f-engine)" stroke="#0A0908" stroke-width="0.6"/>
+    <!-- engine pylon connecting to wing -->
+    <path d="M 545,308 L 580,308 L 575,328 L 550,328 Z" fill="#3A3530"/>
+    <!-- engine front intake -->
+    <ellipse cx="520" cy="338" rx="16" ry="19" fill="url(#f-engine-intake)" stroke="#0A0908" stroke-width="0.5"/>
+    <!-- intake inner rim -->
+    <ellipse cx="520" cy="338" rx="11" ry="14" fill="#0A0908"/>
+    <!-- fan blades hint -->
+    <circle cx="520" cy="338" r="6" fill="#2A2520"/>
+    <path d="M 520,332 L 520,344 M 515,334 L 525,342 M 515,342 L 525,334" stroke="#5A5045" stroke-width="0.6"/>
+    <!-- engine highlight -->
+    <ellipse cx="555" cy="328" rx="44" ry="3.5" fill="#FFFFFF" opacity="0.2"/>
+    <!-- engine exhaust -->
+    <ellipse cx="605" cy="338" rx="7" ry="16" fill="#0A0908"/>
+
+    <!-- Motion blur hint at wing tip -->
+    <path d="M 608,340 L 660,340" stroke="#FFFFFF" stroke-width="1.5" opacity="0.4" stroke-linecap="round"/>
+    <path d="M 615,344 L 655,344" stroke="#FFFFFF" stroke-width="1" opacity="0.25" stroke-linecap="round"/>
+  </svg>
+
+  <!-- WINDOW DETAIL — zoomed view into a passenger window showing two travellers -->
+  <svg class="splash-window" id="plane-window" viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="w-sky" cx="0.5" cy="0.4" r="0.9">
+        <stop offset="0%" stop-color="#F8E8C8"/>
+        <stop offset="40%" stop-color="#E8A878"/>
+        <stop offset="80%" stop-color="#A85838"/>
+        <stop offset="100%" stop-color="#3A2520"/>
+      </radialGradient>
+      <radialGradient id="w-glass" cx="0.3" cy="0.3" r="0.8">
+        <stop offset="0%" stop-color="rgba(255,255,255,0.4)"/>
+        <stop offset="40%" stop-color="rgba(255,255,255,0.05)"/>
+        <stop offset="100%" stop-color="rgba(0,0,0,0.2)"/>
+      </radialGradient>
+      <linearGradient id="w-frame" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#FDFAF4"/>
+        <stop offset="50%" stop-color="#E8E0CC"/>
+        <stop offset="100%" stop-color="#A89A7E"/>
+      </linearGradient>
+      <linearGradient id="w-frame-inner" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#8C7E63"/>
+        <stop offset="100%" stop-color="#5A4F3D"/>
+      </linearGradient>
+    </defs>
+
+    <!-- Outer fuselage panel (the white plane body around the window) -->
+    <rect x="0" y="0" width="600" height="600" fill="url(#w-frame)"/>
+    <!-- Subtle panel rivets row -->
+    <g fill="#A89A7E" opacity="0.5">
+      <circle cx="40" cy="60" r="2"/>
+      <circle cx="40" cy="120" r="2"/>
+      <circle cx="40" cy="180" r="2"/>
+      <circle cx="40" cy="240" r="2"/>
+      <circle cx="40" cy="300" r="2"/>
+      <circle cx="40" cy="360" r="2"/>
+      <circle cx="40" cy="420" r="2"/>
+      <circle cx="40" cy="480" r="2"/>
+      <circle cx="40" cy="540" r="2"/>
+      <circle cx="560" cy="60" r="2"/>
+      <circle cx="560" cy="120" r="2"/>
+      <circle cx="560" cy="180" r="2"/>
+      <circle cx="560" cy="240" r="2"/>
+      <circle cx="560" cy="300" r="2"/>
+      <circle cx="560" cy="360" r="2"/>
+      <circle cx="560" cy="420" r="2"/>
+      <circle cx="560" cy="480" r="2"/>
+      <circle cx="560" cy="540" r="2"/>
+    </g>
+    <!-- Orange livery stripe across panel -->
+    <rect x="0" y="540" width="600" height="14" fill="#E0653D"/>
+    <rect x="0" y="556" width="600" height="4" fill="#1A1814" opacity="0.4"/>
+
+    <!-- Window frame outer (rounded rectangle, classic Boeing oval window) -->
+    <rect x="120" y="140" width="360" height="320" rx="140" fill="url(#w-frame-inner)" stroke="#3A3530" stroke-width="3"/>
+    <!-- Window frame inner -->
+    <rect x="138" y="158" width="324" height="284" rx="130" fill="#1A1814"/>
+
+    <!-- Sky / view through window (warm sunset gradient — feels like aerial dusk) -->
+    <rect x="148" y="168" width="304" height="264" rx="125" fill="url(#w-sky)"/>
+
+    <!-- Distant cloud layer beyond the window -->
+    <ellipse cx="240" cy="280" rx="60" ry="14" fill="#FFE8C8" opacity="0.55"/>
+    <ellipse cx="360" cy="320" rx="55" ry="12" fill="#FFE8C8" opacity="0.4"/>
+    <ellipse cx="200" cy="350" rx="45" ry="10" fill="#FFFFFF" opacity="0.3"/>
+    <ellipse cx="400" cy="240" rx="50" ry="11" fill="#FFFFFF" opacity="0.35"/>
+
+    <!-- TWO TRAVELLERS — stylised line-art silhouettes seated, looking out -->
+    <!-- They appear at the BOTTOM portion of the window, as if seen from outside -->
+
+    <!-- Cabin interior shadow behind them (suggests they're inside the plane) -->
+    <path d="M 148,440 Q 300,420 452,440 L 452,432 L 148,432 Z" fill="#1A1814" opacity="0.4"/>
+    <ellipse cx="300" cy="445" rx="160" ry="20" fill="#1A1814" opacity="0.3"/>
+
+    <!-- LEFT TRAVELLER (woman with scarf) -->
+    <g transform="translate(245, 340)">
+      <!-- Shoulders / scarf -->
+      <path d="M -45,75 Q -50,55 -38,42 Q -20,38 -10,40 L 10,40 Q 22,40 32,48 Q 42,60 38,80 L 38,90 L -45,90 Z" fill="#5A6878" opacity="0.85"/>
+      <!-- Scarf detail draping -->
+      <path d="M -38,52 Q -42,68 -36,82" stroke="#8090A0" stroke-width="1.5" fill="none" opacity="0.7"/>
+      <path d="M 32,52 Q 38,66 32,82" stroke="#8090A0" stroke-width="1.5" fill="none" opacity="0.7"/>
+      <!-- Head -->
+      <ellipse cx="0" cy="14" rx="22" ry="26" fill="#2C2520"/>
+      <!-- Hair pulled back -->
+      <path d="M -22,5 Q -22,-12 0,-14 Q 22,-12 22,5 Q 18,-8 0,-8 Q -18,-8 -22,5 Z" fill="#1A1814"/>
+      <!-- Face highlight (warm reflected sunset light) -->
+      <ellipse cx="-3" cy="16" rx="14" ry="17" fill="#D4A878" opacity="0.6"/>
+      <ellipse cx="-5" cy="14" rx="8" ry="11" fill="#E8B888" opacity="0.5"/>
+      <!-- Sunglasses (subtle) -->
+      <rect x="-15" y="11" width="11" height="6" rx="2" fill="#0A0908"/>
+      <rect x="4" y="11" width="11" height="6" rx="2" fill="#0A0908"/>
+      <line x1="-4" y1="14" x2="4" y2="14" stroke="#0A0908" stroke-width="1"/>
+      <!-- Earring glint -->
+      <circle cx="-19" cy="22" r="1.2" fill="#D4A847"/>
+      <!-- Lip hint -->
+      <path d="M -6,30 Q 0,32 6,30" stroke="#A04030" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    </g>
+
+    <!-- RIGHT TRAVELLER (man with glasses, beard) -->
+    <g transform="translate(355, 345)">
+      <!-- Shoulders / striped shirt -->
+      <path d="M -42,70 Q -48,52 -34,40 Q -18,36 -8,38 L 8,38 Q 22,38 36,46 Q 46,58 42,78 L 42,90 L -42,90 Z" fill="#A8B0C0" opacity="0.85"/>
+      <!-- Shirt stripes -->
+      <g stroke="#5A6878" stroke-width="0.8" opacity="0.6">
+        <line x1="-30" y1="45" x2="-32" y2="88"/>
+        <line x1="-18" y1="42" x2="-22" y2="88"/>
+        <line x1="-6" y1="40" x2="-10" y2="88"/>
+        <line x1="6" y1="40" x2="10" y2="88"/>
+        <line x1="18" y1="42" x2="22" y2="88"/>
+        <line x1="30" y1="45" x2="34" y2="88"/>
+      </g>
+      <!-- Collar -->
+      <path d="M -8,38 L 0,48 L 8,38" stroke="#5A6878" stroke-width="1.5" fill="#FAF6EF" opacity="0.7"/>
+      <!-- Head -->
+      <ellipse cx="0" cy="12" rx="23" ry="27" fill="#3A2820"/>
+      <!-- Hair on top -->
+      <path d="M -22,2 Q -22,-14 0,-16 Q 22,-14 22,2 Q 16,-6 0,-6 Q -16,-6 -22,2 Z" fill="#1A1814"/>
+      <!-- Face highlight (warm light) -->
+      <ellipse cx="3" cy="14" rx="15" ry="18" fill="#C49878" opacity="0.55"/>
+      <ellipse cx="5" cy="12" rx="9" ry="12" fill="#D8A888" opacity="0.5"/>
+      <!-- Glasses -->
+      <rect x="-17" y="8" width="13" height="9" rx="2" fill="none" stroke="#0A0908" stroke-width="1.5"/>
+      <rect x="4" y="8" width="13" height="9" rx="2" fill="none" stroke="#0A0908" stroke-width="1.5"/>
+      <line x1="-4" y1="12" x2="4" y2="12" stroke="#0A0908" stroke-width="1"/>
+      <!-- Eye dots through glasses -->
+      <circle cx="-11" cy="13" r="1.2" fill="#1A1814"/>
+      <circle cx="11" cy="13" r="1.2" fill="#1A1814"/>
+      <!-- Beard (grey-white) -->
+      <path d="M -14,28 Q -12,38 -4,40 L 4,40 Q 12,38 14,28 Q 10,34 0,34 Q -10,34 -14,28 Z" fill="#D4CCB8"/>
+      <!-- Mustache hint -->
+      <path d="M -8,26 Q 0,28 8,26" stroke="#A89880" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <!-- Slight smile -->
+      <path d="M -4,33 Q 0,35 4,33" stroke="#3A2820" stroke-width="0.8" fill="none"/>
+    </g>
+
+    <!-- Reflection ellipse on the glass — top-left highlight -->
+    <ellipse cx="220" cy="220" rx="80" ry="40" fill="url(#w-glass)" opacity="0.5"/>
+    <!-- Sharp glass glint -->
+    <path d="M 180,200 Q 220,180 250,205" stroke="#FFFFFF" stroke-width="2" fill="none" opacity="0.5"/>
+
+    <!-- Window inner frame edge highlight -->
+    <rect x="138" y="158" width="324" height="284" rx="130" fill="none" stroke="#FAF6EF" stroke-width="1" opacity="0.3"/>
+
+    <!-- Tiny caption below window -->
+    <text x="300" y="500" text-anchor="middle" font-family="Instrument Serif, serif" font-style="italic" font-size="22" fill="#3A2820" opacity="0.85">on their way home</text>
+    <text x="300" y="522" text-anchor="middle" font-family="Geist Mono, monospace" font-size="9" fill="#8C7E63" letter-spacing="3">— SEAT 14A —</text>
+  </svg>
+
+  <!-- REAR-FACING plane (camera behind it as it flies away) -->
+  <svg class="splash-plane rear" id="plane-rear" viewBox="0 0 1000 700" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="r-fuse" x1="0.5" y1="0" x2="0.5" y2="1">
+        <stop offset="0%" stop-color="#FDFAF4"/>
+        <stop offset="50%" stop-color="#F5F0E8"/>
+        <stop offset="100%" stop-color="#A89A7E"/>
+      </linearGradient>
+      <radialGradient id="r-engine" cx="0.5" cy="0.5" r="0.55">
+        <stop offset="0%" stop-color="#FFE8B0"/>
+        <stop offset="20%" stop-color="#E0653D"/>
+        <stop offset="55%" stop-color="#3A2520"/>
+        <stop offset="100%" stop-color="#1A1814"/>
+      </radialGradient>
+      <linearGradient id="r-wing" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#F0E8D8"/>
+        <stop offset="100%" stop-color="#A89A7E"/>
+      </linearGradient>
+    </defs>
+
+    <!-- WINGS — from behind, slightly upturned, narrower than front view -->
+    <path d="M 480,355 L 95,395 L 75,410 L 105,412 L 490,372 Z" fill="url(#r-wing)" stroke="#8C7E63" stroke-width="0.8"/>
+    <path d="M 520,355 L 905,395 L 925,410 L 895,412 L 510,372 Z" fill="url(#r-wing)" stroke="#8C7E63" stroke-width="0.8"/>
+    <!-- Wing trailing edges visible from behind -->
+    <path d="M 105,395 L 490,365 L 490,372 L 105,412 Z" fill="#1A1814" opacity="0.2"/>
+    <path d="M 895,395 L 510,365 L 510,372 L 895,412 Z" fill="#1A1814" opacity="0.2"/>
+
+    <!-- Winglets at tips -->
+    <path d="M 95,395 L 80,372 L 92,372 L 105,393 Z" fill="#E0653D"/>
+    <path d="M 905,395 L 920,372 L 908,372 L 895,393 Z" fill="#E0653D"/>
+
+    <!-- ENGINES from behind — visible glowing exhaust -->
+    <ellipse cx="280" cy="402" rx="52" ry="54" fill="#1A1814" stroke="#0A0908" stroke-width="1"/>
+    <ellipse cx="280" cy="402" rx="42" ry="44" fill="url(#r-engine)"/>
+    <ellipse cx="280" cy="402" rx="22" ry="24" fill="#0A0908" opacity="0.7"/>
+    <!-- Pylon -->
+    <path d="M 262,355 L 298,355 L 295,375 L 265,375 Z" fill="#3A3530"/>
+    <!-- Exhaust trail -->
+    <path d="M 280,456 Q 285,500 295,560" stroke="rgba(255,255,255,0.3)" stroke-width="6" fill="none" stroke-linecap="round"/>
+
+    <ellipse cx="720" cy="402" rx="52" ry="54" fill="#1A1814" stroke="#0A0908" stroke-width="1"/>
+    <ellipse cx="720" cy="402" rx="42" ry="44" fill="url(#r-engine)"/>
+    <ellipse cx="720" cy="402" rx="22" ry="24" fill="#0A0908" opacity="0.7"/>
+    <path d="M 702,355 L 738,355 L 735,375 L 705,375 Z" fill="#3A3530"/>
+    <path d="M 720,456 Q 715,500 705,560" stroke="rgba(255,255,255,0.3)" stroke-width="6" fill="none" stroke-linecap="round"/>
+
+    <!-- FUSELAGE — narrow rear-view oval -->
+    <ellipse cx="500" cy="370" rx="55" ry="165" fill="url(#r-fuse)" stroke="#A89A7E" stroke-width="1"/>
+    <!-- Tail cone (back end of fuselage) -->
+    <path d="M 460,490 Q 500,540 540,490 Q 540,510 500,520 Q 460,510 460,490 Z" fill="#E8E0CC" stroke="#8C7E63" stroke-width="0.6"/>
+
+    <!-- VERTICAL TAIL FIN — viewed from behind, tall and prominent -->
+    <path d="M 485,360 L 478,180 L 522,180 L 515,360 Z" fill="#E0653D"/>
+    <!-- Tail fin shadow side -->
+    <path d="M 500,180 L 522,180 L 515,360 L 500,360 Z" fill="#1A1814" opacity="0.15"/>
+    <!-- K logo -->
+    <g transform="translate(491, 230)">
+      <path d="M 0,0 L 0,30 M 0,15 L 16,0 M 0,15 L 16,30" stroke="#FAF6EF" stroke-width="3" fill="none" stroke-linecap="round"/>
+    </g>
+
+    <!-- Horizontal stabilisers (the small wings on the tail) -->
+    <path d="M 480,340 L 380,358 L 380,370 L 490,360 Z" fill="url(#r-wing)" stroke="#8C7E63" stroke-width="0.6"/>
+    <path d="M 520,340 L 620,358 L 620,370 L 510,360 Z" fill="url(#r-wing)" stroke="#8C7E63" stroke-width="0.6"/>
+
+    <!-- Fuselage highlight -->
+    <ellipse cx="492" cy="350" rx="8" ry="120" fill="#FFFFFF" opacity="0.3"/>
+    <!-- Fuselage shadow -->
+    <ellipse cx="535" cy="380" rx="18" ry="140" fill="#1A1814" opacity="0.18"/>
+
+    <!-- Orange livery stripe on fuselage -->
+    <path d="M 446,395 Q 500,405 554,395" stroke="#E0653D" stroke-width="3.5" fill="none"/>
+
+    <!-- Contrail spawning behind -->
+    <path d="M 500,520 Q 502,580 510,680" stroke="rgba(255,255,255,0.4)" stroke-width="3" fill="none" stroke-linecap="round"/>
+  </svg>
+
+  <div class="splash-title">
+    <span class="small">Now boarding</span>
+    <span class="big"><em>Kulsoom</em> Airlines</span>
+    <span class="tag">A journey written in the sky.</span>
+  </div>
+
+  <button class="skip" id="skip-btn">Skip ↗</button>
+</div>
+
+<!-- Ambient background (visible after splash dismisses) -->
+<div class="ambient" aria-hidden="true">
+  <div class="amb-cloud amb-cloud-1"></div>
+  <div class="amb-cloud amb-cloud-2"></div>
+  <div class="amb-cloud amb-cloud-3"></div>
+  <div class="amb-cloud amb-cloud-4"></div>
+  <div class="star star-1"></div>
+  <div class="star star-2"></div>
+  <div class="star star-3"></div>
+</div>
+
+<!-- ============================================
+     MAIN PAGE
+     ============================================ -->
+<div class="container">
+
+  <header>
+    <div class="top-row">
+      <span class="brand">Travel dossier</span>
+      <span class="date-tag">June 2026</span>
+    </div>
+    <h1>London<span class="arrow">→</span><em>Karachi</em></h1>
+    <p class="subtitle">Tap a flight to expand and watch the route animate on its own map.</p>
+  </header>
+
+  <div class="trip-stats">
+    <div class="stat"><span class="stat-label">Depart</span><span class="stat-value">8 Jun</span></div>
+    <div class="stat"><span class="stat-label">Return</span><span class="stat-value">15 Jun</span></div>
+    <div class="stat"><span class="stat-label">Duration</span><span class="stat-value">7 nights</span></div>
+    <div class="stat"><span class="stat-label">Direct</span><span class="stat-value">None</span></div>
+  </div>
+
+  <div class="filters">
+    <button class="pill active" data-filter="all">All</button>
+    <button class="pill" data-filter="heathrow">Heathrow</button>
+    <button class="pill" data-filter="value">Best value</button>
+    <button class="pill" data-filter="premium">Premium</button>
+    <button class="pill" data-filter="fast">Fastest</button>
+  </div>
+
+  <!-- CARDS — logos are inline SVG, designed to evoke each brand -->
+
+  <article class="card featured" data-tags="value fast"
+    data-stop-x="445" data-stop-y="120" data-stop-code="IST" data-stop-name="ISTANBUL"
+    data-from-code="LGW" data-to-code="KHI"
+    data-depart-info="LGW · 10:50 BST" data-stop-info="Local 18:20"
+    data-layover="2h 40m" data-arrive-info="KHI · 04:20 PKT" data-out-dur="13h 30m"
+    data-from="LGW" data-stop="IST" data-to="KHI"
+    data-time-from="10:50" data-time-stop="18:20" data-time-to="04:20">
+    <div class="card-summary">
+      <div class="summary-top">
+        <div class="summary-left">
+          <div class="airline-logo" style="background:#C70A0C;">
+            <svg viewBox="0 0 46 46"><path d="M 8,28 Q 14,18 23,16 Q 32,15 38,22 Q 30,17 23,20 Q 16,23 12,30 Z" fill="#fff"/><circle cx="32" cy="20" r="2" fill="#fff"/></svg>
+          </div>
+          <div class="airline-info">
+            <span class="top-pick-badge">★ TOP PICK</span>
+            <h2 class="airline">Turkish Airlines</h2>
+            <p class="route">LGW <span class="dot"></span> IST <span class="dot"></span> KHI</p>
+          </div>
+        </div>
+        <div class="summary-right"><span class="price">£440</span><span class="chevron"></span></div>
+      </div>
+    </div>
+    <div class="card-body"><div class="card-body-inner">
+      <div class="flight-map"></div>
+      <div class="specs">
+        <div><span class="spec-label">Departure</span><span class="spec-value">LGW · 10:50 BST</span></div>
+        <div><span class="spec-label">Layover</span><span class="spec-value">IST · 2h 40m</span></div>
+        <div><span class="spec-label">Arrival</span><span class="spec-value">KHI · 04:20 PKT</span></div>
+        <div><span class="spec-label">Outbound</span><span class="spec-value">13h 30m</span></div>
+        <div><span class="spec-label">Return</span><span class="spec-value">11h 30m</span></div>
+        <div><span class="spec-label">Baggage</span><span class="spec-value">30kg included</span></div>
+      </div>
+      <p class="verdict">The sweet spot. Shortest realistic journey, full-service airline, IST is comfortable for transit.</p>
+      <div class="actions">
+        <a class="btn" href="https://www.turkishairlines.com/en-gb/flights/booking/index.html" target="_blank">Book direct ↗</a>
+        <a class="btn secondary" href="https://www.skyscanner.net/transport/flights/lgw/khi/260608/260615/" target="_blank">Compare</a>
+      </div>
+    </div></div>
+  </article>
+
+  <article class="card" data-tags="value fast"
+    data-stop-x="430" data-stop-y="130" data-stop-code="SAW" data-stop-name="ISTANBUL SAW"
+    data-depart-info="STN · 12:15 BST" data-stop-info="Local 19:25"
+    data-layover="1h 35m" data-arrive-info="KHI · 03:25 PKT" data-out-dur="11h 10m"
+    data-from="STN" data-stop="SAW" data-to="KHI"
+    data-time-from="12:15" data-time-stop="19:25" data-time-to="03:25">
+    <div class="card-summary">
+      <div class="summary-top">
+        <div class="summary-left">
+          <div class="airline-logo" style="background:linear-gradient(135deg,#FFCC00,#FF6B00);">
+            <svg viewBox="0 0 46 46"><path d="M 23,8 L 27,20 L 38,20 L 29,27 L 32,38 L 23,31 L 14,38 L 17,27 L 8,20 L 19,20 Z" fill="#1A1814" opacity="0.85"/></svg>
+          </div>
+          <div class="airline-info">
+            <h2 class="airline">Pegasus Airlines</h2>
+            <p class="route">STN <span class="dot"></span> SAW <span class="dot"></span> KHI</p>
+          </div>
+        </div>
+        <div class="summary-right"><span class="price">£414</span><span class="chevron"></span></div>
+      </div>
+    </div>
+    <div class="card-body"><div class="card-body-inner">
+      <div class="flight-map"></div>
+      <div class="specs">
+        <div><span class="spec-label">Departure</span><span class="spec-value">STN · 12:15 BST</span></div>
+        <div><span class="spec-label">Layover</span><span class="spec-value">SAW · 1h 35m</span></div>
+        <div><span class="spec-label">Arrival</span><span class="spec-value">KHI · 03:25 PKT</span></div>
+        <div><span class="spec-label">Outbound</span><span class="spec-value">11h 10m</span></div>
+        <div><span class="spec-label">Return</span><span class="spec-value">13h 10m</span></div>
+        <div><span class="spec-label">Baggage</span><span class="spec-value">Extra fee</span></div>
+      </div>
+      <p class="verdict">Cheapest with reasonable time. Budget carrier — bag fees stack up, STN is a hassle.</p>
+      <div class="actions">
+        <a class="btn" href="https://www.flypgs.com/en" target="_blank">Book direct ↗</a>
+        <a class="btn secondary" href="https://www.kayak.co.uk/flight-routes/London-LON/Karachi-Quaid-E-Azam-Intl-KHI" target="_blank">Compare</a>
+      </div>
+    </div></div>
+  </article>
+
+  <article class="card" data-tags="heathrow value"
+    data-stop-x="565" data-stop-y="195" data-stop-code="BAH" data-stop-name="BAHRAIN"
+    data-depart-info="LHR · 10:00 BST" data-stop-info="Local 19:30"
+    data-layover="~6h 40m" data-arrive-info="KHI · 06:00 PKT" data-out-dur="16h–17h"
+    data-from="LHR" data-stop="BAH" data-to="KHI"
+    data-time-from="10:00" data-time-stop="19:30" data-time-to="06:00">
+    <div class="card-summary">
+      <div class="summary-top">
+        <div class="summary-left">
+          <div class="airline-logo" style="background:#5C2D2F;">
+            <svg viewBox="0 0 46 46"><path d="M 14,30 Q 14,18 23,18 Q 32,18 32,30" stroke="#D4A847" stroke-width="2.5" fill="none"/><circle cx="23" cy="14" r="2" fill="#D4A847"/><path d="M 18,30 L 28,30" stroke="#D4A847" stroke-width="2"/></svg>
+          </div>
+          <div class="airline-info">
+            <h2 class="airline">Gulf Air</h2>
+            <p class="route">LHR <span class="dot"></span> BAH <span class="dot"></span> KHI</p>
+          </div>
+        </div>
+        <div class="summary-right"><span class="price">£430</span><span class="chevron"></span></div>
+      </div>
+    </div>
+    <div class="card-body"><div class="card-body-inner">
+      <div class="flight-map"></div>
+      <div class="specs">
+        <div><span class="spec-label">Departure</span><span class="spec-value">LHR · 10:00 BST</span></div>
+        <div><span class="spec-label">Layover</span><span class="spec-value">BAH · ~6h 40m</span></div>
+        <div><span class="spec-label">Arrival</span><span class="spec-value">KHI · 06:00 PKT</span></div>
+        <div><span class="spec-label">Outbound</span><span class="spec-value">16–17h</span></div>
+        <div><span class="spec-label">Return</span><span class="spec-value">12–14h</span></div>
+        <div><span class="spec-label">Baggage</span><span class="spec-value">30kg included</span></div>
+      </div>
+      <p class="verdict">Cheapest Heathrow option, but the long Bahrain layover makes it tiring for older travellers.</p>
+      <div class="actions">
+        <a class="btn" href="https://www.gulfair.com/" target="_blank">Book direct ↗</a>
+        <a class="btn secondary" href="https://www.skyscanner.net/transport/flights/lhr/khi/260608/260615/" target="_blank">Compare</a>
+      </div>
+    </div></div>
+  </article>
+
+  <article class="card" data-tags="heathrow value"
+    data-stop-x="510" data-stop-y="190" data-stop-code="JED" data-stop-name="JEDDAH"
+    data-depart-info="LHR · 14:40 BST" data-stop-info="Local 23:45"
+    data-layover="Varies" data-arrive-info="KHI · 07:30 PKT" data-out-dur="12h 50m"
+    data-from="LHR" data-stop="JED" data-to="KHI"
+    data-time-from="14:40" data-time-stop="23:45" data-time-to="07:30">
+    <div class="card-summary">
+      <div class="summary-top">
+        <div class="summary-left">
+          <div class="airline-logo" style="background:#006C35;">
+            <svg viewBox="0 0 46 46"><path d="M 10,32 Q 10,15 23,15 Q 36,15 36,32" stroke="#fff" stroke-width="2" fill="none"/><path d="M 18,32 L 28,32" stroke="#fff" stroke-width="2"/><path d="M 23,10 L 25,15 L 21,15 Z" fill="#fff"/></svg>
+          </div>
+          <div class="airline-info">
+            <h2 class="airline">Saudia</h2>
+            <p class="route">LHR <span class="dot"></span> JED <span class="dot"></span> KHI</p>
+          </div>
+        </div>
+        <div class="summary-right"><span class="price">£450</span><span class="chevron"></span></div>
+      </div>
+    </div>
+    <div class="card-body"><div class="card-body-inner">
+      <div class="flight-map"></div>
+      <div class="specs">
+        <div><span class="spec-label">Departure</span><span class="spec-value">LHR · 14:40 BST</span></div>
+        <div><span class="spec-label">Layover</span><span class="spec-value">JED · Varies</span></div>
+        <div><span class="spec-label">Arrival</span><span class="spec-value">KHI · 07:30 PKT</span></div>
+        <div><span class="spec-label">Outbound</span><span class="spec-value">12h 50m</span></div>
+        <div><span class="spec-label">Return</span><span class="spec-value">~14h</span></div>
+        <div><span class="spec-label">Baggage</span><span class="spec-value">30kg included</span></div>
+      </div>
+      <p class="verdict">Heathrow departure, reasonable total time via Jeddah. Solid middle-ground option.</p>
+      <div class="actions">
+        <a class="btn" href="https://www.saudia.com/" target="_blank">Book direct ↗</a>
+        <a class="btn secondary" href="https://www.cheapflights.co.uk/flights/Karachi/London/" target="_blank">Compare</a>
+      </div>
+    </div></div>
+  </article>
+
+  <article class="card" data-tags="heathrow premium fast"
+    data-stop-x="600" data-stop-y="200" data-stop-code="AUH" data-stop-name="ABU DHABI"
+    data-depart-info="LHR · 14:45 BST" data-stop-info="Local 01:15"
+    data-layover="~3h" data-arrive-info="KHI · 03:00 PKT" data-out-dur="11h 55m"
+    data-from="LHR" data-stop="AUH" data-to="KHI"
+    data-time-from="14:45" data-time-stop="01:15" data-time-to="03:00">
+    <div class="card-summary">
+      <div class="summary-top">
+        <div class="summary-left">
+          <div class="airline-logo" style="background:#BD8B2A;">
+            <svg viewBox="0 0 46 46"><path d="M 12,30 L 18,16 L 24,30 L 30,16 L 36,30" stroke="#fff" stroke-width="2.2" fill="none" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="airline-info">
+            <h2 class="airline">Etihad Airways</h2>
+            <p class="route">LHR <span class="dot"></span> AUH <span class="dot"></span> KHI</p>
+          </div>
+        </div>
+        <div class="summary-right"><span class="price">£492</span><span class="chevron"></span></div>
+      </div>
+    </div>
+    <div class="card-body"><div class="card-body-inner">
+      <div class="flight-map"></div>
+      <div class="specs">
+        <div><span class="spec-label">Departure</span><span class="spec-value">LHR · 14:45 BST</span></div>
+        <div><span class="spec-label">Layover</span><span class="spec-value">AUH · ~3h</span></div>
+        <div><span class="spec-label">Arrival</span><span class="spec-value">KHI · 03:00 PKT</span></div>
+        <div><span class="spec-label">Outbound</span><span class="spec-value">11h 55m</span></div>
+        <div><span class="spec-label">Return</span><span class="spec-value">~13h</span></div>
+        <div><span class="spec-label">Baggage</span><span class="spec-value">35kg included</span></div>
+      </div>
+      <p class="verdict">Fastest premium option. Most popular choice for this route.</p>
+      <div class="actions">
+        <a class="btn" href="https://www.etihad.com/en-gb/" target="_blank">Book direct ↗</a>
+        <a class="btn secondary" href="https://www.momondo.co.uk/flights/london/karachi" target="_blank">Compare</a>
+      </div>
+    </div></div>
+  </article>
+
+  <article class="card" data-tags="heathrow premium"
+    data-stop-x="585" data-stop-y="195" data-stop-code="DOH" data-stop-name="DOHA"
+    data-depart-info="LGW · 09:00 BST" data-stop-info="Local 19:00"
+    data-layover="~4h" data-arrive-info="KHI · 08:15 PKT" data-out-dur="12h 30m"
+    data-from="LGW" data-stop="DOH" data-to="KHI"
+    data-time-from="09:00" data-time-stop="19:00" data-time-to="08:15">
+    <div class="card-summary">
+      <div class="summary-top">
+        <div class="summary-left">
+          <div class="airline-logo" style="background:#5C0931;">
+            <svg viewBox="0 0 46 46"><path d="M 23,8 Q 14,14 14,23 Q 14,32 23,38 Q 32,32 32,23 Q 32,14 23,8 Z M 23,12 L 27,18 L 33,19 L 28,24 L 30,30 L 23,27 L 16,30 L 18,24 L 13,19 L 19,18 Z" fill="#D4B570"/></svg>
+          </div>
+          <div class="airline-info">
+            <h2 class="airline">Qatar Airways</h2>
+            <p class="route">LGW/LHR <span class="dot"></span> DOH <span class="dot"></span> KHI</p>
+          </div>
+        </div>
+        <div class="summary-right"><span class="price">£508</span><span class="chevron"></span></div>
+      </div>
+    </div>
+    <div class="card-body"><div class="card-body-inner">
+      <div class="flight-map"></div>
+      <div class="specs">
+        <div><span class="spec-label">Departure</span><span class="spec-value">LGW · 09:00 BST</span></div>
+        <div><span class="spec-label">Layover</span><span class="spec-value">DOH · ~4h</span></div>
+        <div><span class="spec-label">Arrival</span><span class="spec-value">KHI · 08:15 PKT</span></div>
+        <div><span class="spec-label">Outbound</span><span class="spec-value">12h 30m</span></div>
+        <div><span class="spec-label">Return</span><span class="spec-value">~13h</span></div>
+        <div><span class="spec-label">Baggage</span><span class="spec-value">30kg included</span></div>
+      </div>
+      <p class="verdict">Best service scores. Free date changes if disruption hits — safest premium pick.</p>
+      <div class="actions">
+        <a class="btn" href="https://www.qatarairways.com/en-gb/homepage.html" target="_blank">Book direct ↗</a>
+        <a class="btn secondary" href="https://www.google.com/travel/flights/flights-from-london-to-karachi.html" target="_blank">Compare</a>
+      </div>
+    </div></div>
+  </article>
+
+  <article class="card" data-tags="heathrow premium"
+    data-stop-x="608" data-stop-y="198" data-stop-code="DXB" data-stop-name="DUBAI"
+    data-depart-info="LHR · 13:50 BST" data-stop-info="Local 00:35"
+    data-layover="Varies" data-arrive-info="KHI · 05:40 PKT" data-out-dur="13h 40m"
+    data-from="LHR" data-stop="DXB" data-to="KHI"
+    data-time-from="13:50" data-time-stop="00:35" data-time-to="05:40">
+    <div class="card-summary">
+      <div class="summary-top">
+        <div class="summary-left">
+          <div class="airline-logo" style="background:#D71921;">
+            <svg viewBox="0 0 46 46"><path d="M 8,30 Q 10,16 23,16 L 36,16 Q 38,20 35,24 L 18,24 Q 14,28 16,32 Z" fill="#fff"/></svg>
+          </div>
+          <div class="airline-info">
+            <h2 class="airline">Emirates</h2>
+            <p class="route">LHR <span class="dot"></span> DXB <span class="dot"></span> KHI</p>
+          </div>
+        </div>
+        <div class="summary-right"><span class="price">£504</span><span class="chevron"></span></div>
+      </div>
+    </div>
+    <div class="card-body"><div class="card-body-inner">
+      <div class="flight-map"></div>
+      <div class="specs">
+        <div><span class="spec-label">Departure</span><span class="spec-value">LHR · 13:50 BST</span></div>
+        <div><span class="spec-label">Layover</span><span class="spec-value">DXB · Varies</span></div>
+        <div><span class="spec-label">Arrival</span><span class="spec-value">KHI · 05:40 PKT</span></div>
+        <div><span class="spec-label">Outbound</span><span class="spec-value">13h 40m</span></div>
+        <div><span class="spec-label">Return</span><span class="spec-value">~14h</span></div>
+        <div><span class="spec-label">Baggage</span><span class="spec-value">35kg included</span></div>
+      </div>
+      <p class="verdict">Premium experience, generous baggage — useful for gifts and extras from Karachi.</p>
+      <div class="actions">
+        <a class="btn" href="https://www.emirates.com/uk/english/" target="_blank">Book direct ↗</a>
+        <a class="btn secondary" href="https://www.opodo.co.uk/airline/EK/emirates/LON/london/KHI/karachi/" target="_blank">Compare</a>
+      </div>
+    </div></div>
+  </article>
+
+  <article class="card" data-tags="heathrow premium"
+    data-stop-x="585" data-stop-y="195" data-stop-code="DOH" data-stop-name="DOHA (BA)"
+    data-depart-info="LGW · 09:00 BST" data-stop-info="Local 19:00"
+    data-layover="~4h" data-arrive-info="KHI · 08:15 PKT" data-out-dur="~13h"
+    data-from="LGW" data-stop="DOH" data-to="KHI"
+    data-time-from="09:00" data-time-stop="19:00" data-time-to="08:15">
+    <div class="card-summary">
+      <div class="summary-top">
+        <div class="summary-left">
+          <div class="airline-logo" style="background:#075AAA;">
+            <svg viewBox="0 0 46 46"><circle cx="23" cy="23" r="14" stroke="#fff" stroke-width="1.5" fill="none"/><path d="M 12,23 Q 23,8 34,23 Q 23,38 12,23" stroke="#E0252B" stroke-width="1.8" fill="none"/><path d="M 12,23 L 34,23" stroke="#E0252B" stroke-width="1.8"/></svg>
+          </div>
+          <div class="airline-info">
+            <h2 class="airline">British Airways</h2>
+            <p class="route">LGW <span class="dot"></span> DOH <span class="dot"></span> KHI</p>
+          </div>
+        </div>
+        <div class="summary-right"><span class="price">£477</span><span class="chevron"></span></div>
+      </div>
+    </div>
+    <div class="card-body"><div class="card-body-inner">
+      <div class="flight-map"></div>
+      <div class="specs">
+        <div><span class="spec-label">Departure</span><span class="spec-value">LGW · 09:00 BST</span></div>
+        <div><span class="spec-label">Layover</span><span class="spec-value">DOH · ~4h</span></div>
+        <div><span class="spec-label">Arrival</span><span class="spec-value">KHI · 08:15 PKT</span></div>
+        <div><span class="spec-label">Outbound</span><span class="spec-value">~13h</span></div>
+        <div><span class="spec-label">Return</span><span class="spec-value">~13h</span></div>
+        <div><span class="spec-label">Baggage</span><span class="spec-value">30kg included</span></div>
+      </div>
+      <p class="verdict">Same flight as Qatar, booked through BA. Useful for Avios collectors.</p>
+      <div class="actions">
+        <a class="btn" href="https://www.britishairways.com/" target="_blank">Book direct ↗</a>
+        <a class="btn secondary" href="https://www.skyscanner.net/routes/lond/khi/london-to-karachi.html" target="_blank">Compare</a>
+      </div>
+    </div></div>
+  </article>
+
+  <h2 class="section-title">Compare across aggregators</h2>
+  <p class="section-sub">Live prices change daily. Cross-check before you book.</p>
+  <div class="agg-grid">
+    <a class="agg-link" href="https://www.skyscanner.net/routes/lond/khi/london-to-karachi.html" target="_blank">Skyscanner</a>
+    <a class="agg-link" href="https://www.kayak.co.uk/flight-routes/London-LON/Karachi-Quaid-E-Azam-Intl-KHI" target="_blank">Kayak</a>
+    <a class="agg-link" href="https://www.momondo.co.uk/flights/london/karachi" target="_blank">Momondo</a>
+    <a class="agg-link" href="https://www.google.com/travel/flights/flights-from-london-to-karachi.html" target="_blank">Google Flights</a>
+    <a class="agg-link" href="https://www.cheapflights.co.uk/flights/Karachi/London/" target="_blank">Cheapflights</a>
+    <a class="agg-link" href="https://www.expedia.co.uk/Flights" target="_blank">Expedia UK</a>
+  </div>
+
+  <div class="warnings">
+    <h2>Before you book</h2>
+    <ol>
+      <li><strong>Flex the dates.</strong> Try Tue 9 → Tue 16 instead — Tuesdays often £30–50 cheaper.</li>
+      <li><strong>Middle East airspace.</strong> Qatar offers free date changes for tickets issued before 15 May 2026 with travel up to 15 Sep 2026.</li>
+      <li><strong>Baggage maths.</strong> Pegasus & Turkish basic don't include hold luggage. Etihad/Emirates include 30–35kg.</li>
+      <li><strong>Book now, not later.</strong> Sweet spot is ~27 days advance for this route.</li>
+      <li><strong>No direct flights.</strong> PIA only flies LHR to Islamabad and Lahore, not Karachi.</li>
+    </ol>
+  </div>
+
+  <footer>
+    <span class="accent">✦</span> Prices verified May 2026 · <span class="serif-it">A Kulsoom Airlines compilation</span>
+  </footer>
+</div>
+
+<script>
+  // ============================================
+  // SPLASH SCREEN — front view approaches, camera pans, rear view flies off fast
+  // ============================================
+  const splash = document.getElementById('splash');
+  const skipBtn = document.getElementById('skip-btn');
+  const planeFront = document.getElementById('plane-front');
+  const planeRear = document.getElementById('plane-rear');
+  const planeWindow = document.getElementById('plane-window');
+  const splashTitle = splash.querySelector('.splash-title');
+
+  let splashDismissed = false;
+  function dismissSplash() {
+    if (splashDismissed) return;
+    splashDismissed = true;
+    document.body.classList.add('ready');
+    splash.classList.add('gone');
+    setTimeout(() => splash.remove(), 800);
+  }
+  skipBtn.addEventListener('click', dismissSplash);
+
+  // Easing functions
+  function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+  function easeInOutCubic(t) {
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  }
+  function easeInQuint(t) { return t * t * t * t * t; }
+  function easeOutQuart(t) { return 1 - Math.pow(1 - t, 4); }
+  function easeInQuart(t) { return t * t * t * t; }
+
+  // Total duration ~6.5s
+  // Phase 1 (0 - 1.4s): Semi-fast approach from NW, front view grows large
+  // Phase 2 (1.4 - 2.0s): Camera dollies into a window, front plane fades, window zooms in
+  // Phase 3 (2.0 - 3.8s): Hold on window — couple visible, gentle breathing
+  // Phase 4 (3.8 - 4.6s): Pan back out, window fades, rear plane appears centred
+  // Phase 5 (4.6 - 6.5s): Fast zoom off to NE — rear view shrinks rapidly
+  // Title fades in ~5.2s
+
+  function runSplashAnimation() {
+    const DURATION = 6000;
+    const start = performance.now();
+
+    function frame(now) {
+      const elapsed = now - start;
+      const t = Math.min(1, elapsed / DURATION);
+
+      let tx, ty, scale, rotate, opacity, blur;
+
+      if (t < 0.4) {
+        // Phase 1: Approach (0 - 2.4s) — semi-fast
+        const p = easeOutQuart(t / 0.4);
+        tx = -180 + p * 130;
+        ty = -30 + p * -20;
+        scale = 0.08 + p * 0.62;
+        rotate = -14 + p * 6;
+        opacity = Math.min(1, p * 2);
+        blur = Math.max(0, 6 - p * 8);
+      } else if (t < 0.6) {
+        // Phase 2: Hold/settle (2.4 - 3.6s) — normal speed
+        const p = easeInOutCubic((t - 0.4) / 0.2);
+        tx = -50;
+        ty = -50;
+        scale = 0.7 + p * 0.04;
+        rotate = -8 + p * 6;
+        opacity = 1;
+        blur = 0;
+      } else {
+        // Phase 3: Plane flies away to the NE (3.6 - 6.0s)
+        const p = easeInQuart((t - 0.6) / 0.4);
+        tx = -50 + p * 90;          // strong rightward motion
+        ty = -50 - p * 60;          // upward motion
+        scale = 0.74 - p * 0.7;     // shrinks as it gets further
+        rotate = -2 + p * 10;       // banks slightly as it turns away
+        opacity = 1 - p * 0.85;
+        blur = p * 1.5;
+      }
+
+      planeFront.style.transform =
+        `translate(${tx}%, ${ty}%) scale(${scale}) rotate(${rotate}deg)`;
+      planeFront.style.opacity = opacity;
+      planeFront.style.filter = blur > 0.1 ? `blur(${blur}px)` : 'none';
+
+      // Keep other elements hidden in this version
+      planeRear.style.opacity = 0;
+      planeWindow.style.opacity = 0;
+
+      if (elapsed > 4000 && !splashTitle.classList.contains('show')) {
+        splashTitle.classList.add('show');
+      }
+
+      if (t < 1 && !splashDismissed) {
+        requestAnimationFrame(frame);
+      } else if (!splashDismissed) {
+        setTimeout(dismissSplash, 700);
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', runSplashAnimation);
+  } else {
+    runSplashAnimation();
+  }
+
+  // ============================================
+  // FLIGHT MAP TEMPLATE — drawn fresh per card
+  // ============================================
+  const LONDON_MM = { x: 165, y: 105 };
+  const KARACHI_MM = { x: 695, y: 235 };
+
+  // Mini continents — stylized world for the flight map (800x320 viewBox)
+  const miniMapShapes = `
+    <!-- North America edge -->
+    <path class="fm-land-2" d="M 0,60 L 70,45 L 105,70 L 90,105 L 50,130 L 15,140 L 0,150 Z"/>
+    <!-- Greenland -->
+    <path class="fm-land" d="M 100,15 L 150,12 L 165,40 L 145,70 L 105,65 L 95,35 Z"/>
+    <!-- UK + Ireland -->
+    <path class="fm-land" d="M 160,90 L 180,85 L 188,95 L 185,112 L 175,120 L 162,115 L 155,103 Z"/>
+    <path class="fm-land-2" d="M 142,98 L 155,96 L 158,108 L 148,113 L 140,107 Z"/>
+    <!-- Scandinavia -->
+    <path class="fm-land" d="M 215,40 L 248,35 L 275,55 L 280,90 L 268,108 L 240,110 L 220,95 L 212,70 Z"/>
+    <!-- Mainland Europe -->
+    <path class="fm-land" d="M 175,120 L 220,115 L 260,120 L 310,128 L 350,140 L 358,155 L 342,168 L 305,175 L 270,172 L 235,165 L 200,155 L 185,142 Z"/>
+    <!-- Iberia -->
+    <path class="fm-land-2" d="M 150,142 L 178,140 L 192,158 L 184,178 L 162,182 L 145,170 L 142,155 Z"/>
+    <!-- North Africa -->
+    <path class="fm-land" d="M 175,190 L 230,188 L 290,195 L 350,205 L 410,220 L 460,238 L 480,265 L 460,290 L 420,300 L 370,295 L 320,285 L 270,275 L 220,260 L 188,240 L 175,210 Z"/>
+    <!-- Sub-Saharan Africa -->
+    <path class="fm-land-2" d="M 320,305 L 380,302 L 425,318 L 445,348 L 432,378 L 400,385 L 358,380 L 330,360 L 320,330 Z"/>
+    <!-- Turkey -->
+    <path class="fm-land" d="M 355,135 L 410,128 L 450,138 L 465,158 L 450,175 L 415,180 L 380,172 L 358,158 Z"/>
+    <!-- Middle East / Saudi Arabia / Iraq -->
+    <path class="fm-land" d="M 410,178 L 460,178 L 500,190 L 528,210 L 540,238 L 545,275 L 525,305 L 488,315 L 450,305 L 425,280 L 412,250 L 408,215 Z"/>
+    <!-- Arabia tip -->
+    <path class="fm-land-2" d="M 510,245 L 545,250 L 560,275 L 548,305 L 520,308 L 505,285 Z"/>
+    <!-- Russia strip -->
+    <path class="fm-land-2" d="M 285,42 L 400,32 L 530,32 L 650,38 L 780,45 L 800,50 L 800,105 L 700,110 L 580,105 L 460,100 L 350,98 L 290,90 Z"/>
+    <!-- Caspian / Central Asia -->
+    <path class="fm-land" d="M 478,115 L 540,110 L 595,120 L 625,142 L 612,162 L 570,170 L 530,168 L 495,158 L 480,140 Z"/>
+    <!-- Iran -->
+    <path class="fm-land-2" d="M 540,168 L 600,168 L 640,182 L 658,210 L 640,235 L 605,245 L 565,238 L 540,215 L 532,188 Z"/>
+    <!-- Pakistan + W India -->
+    <path class="fm-land" d="M 625,205 L 680,202 L 720,215 L 745,242 L 738,272 L 708,288 L 672,288 L 642,272 L 625,250 L 620,228 Z"/>
+    <!-- India -->
+    <path class="fm-land" d="M 710,250 L 755,253 L 783,272 L 800,300 L 783,330 L 755,348 L 725,340 L 710,315 L 705,285 Z"/>
+    <!-- China edge -->
+    <path class="fm-land" d="M 660,108 L 745,105 L 790,128 L 800,160 L 800,215 L 770,220 L 735,202 L 695,185 L 670,160 L 655,135 Z"/>
+  `;
+
+  function curvedPath(a, b, arcMul) {
+    arcMul = arcMul || 0.18;
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    return `M ${a.x} ${a.y} Q ${(a.x+b.x)/2} ${(a.y+b.y)/2 - dist*arcMul} ${b.x} ${b.y}`;
+  }
+  function bezierPoint(a, c, b, t) {
+    return {
+      x: (1-t)*(1-t)*a.x + 2*(1-t)*t*c.x + t*t*b.x,
+      y: (1-t)*(1-t)*a.y + 2*(1-t)*t*c.y + t*t*b.y
+    };
+  }
+  function bezierTangent(a, c, b, t) {
+    const dx = 2*(1-t)*(c.x-a.x) + 2*t*(b.x-c.x);
+    const dy = 2*(1-t)*(c.y-a.y) + 2*t*(b.y-c.y);
+    return Math.atan2(dy, dx) * 180/Math.PI;
+  }
+  function controlPoint(a, b, arcMul) {
+    arcMul = arcMul || 0.18;
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    return { x: (a.x+b.x)/2, y: (a.y+b.y)/2 - dist*arcMul };
+  }
+
+  function buildFlightMap(card) {
+    const container = card.querySelector('.flight-map');
+    if (!container || container.dataset.built) return;
+    container.dataset.built = '1';
+
+    const stopX = parseFloat(card.dataset.stopX);
+    const stopY = parseFloat(card.dataset.stopY);
+    const stopCode = card.dataset.stopCode;
+    const stopName = card.dataset.stopName;
+
+    container.innerHTML = `
+      <svg viewBox="0 0 800 320" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+        ${miniMapShapes}
+
+        <!-- dotted reference route -->
+        <path class="fm-route dotted" d="${curvedPath(LONDON_MM, KARACHI_MM, 0.22)}"/>
+
+        <!-- active route segments -->
+        <path class="fm-route fm-seg1" d="" stroke-dasharray="" stroke-dashoffset="0" style="opacity:0"/>
+        <path class="fm-route fm-seg2" d="" stroke-dasharray="" stroke-dashoffset="0" style="opacity:0"/>
+
+        <!-- cities -->
+        <g class="fm-city-london" data-city="london" style="cursor:pointer">
+          <circle class="fm-pulse" cx="${LONDON_MM.x}" cy="${LONDON_MM.y}" r="2"/>
+          <circle class="fm-dot" cx="${LONDON_MM.x}" cy="${LONDON_MM.y}" r="3"/>
+          <text class="fm-label" x="${LONDON_MM.x}" y="${LONDON_MM.y - 7}" text-anchor="middle">LONDON</text>
+          <circle class="fm-hit" cx="${LONDON_MM.x}" cy="${LONDON_MM.y}" r="22" fill="transparent"/>
+        </g>
+        <g class="fm-city-stop" data-city="stop" style="cursor:pointer">
+          <circle class="fm-pulse" cx="${stopX}" cy="${stopY}" r="2"/>
+          <circle class="fm-dot" cx="${stopX}" cy="${stopY}" r="3"/>
+          <text class="fm-label" x="${stopX}" y="${stopY + 12}" text-anchor="middle">${stopCode}</text>
+          <circle class="fm-hit" cx="${stopX}" cy="${stopY}" r="22" fill="transparent"/>
+        </g>
+        <g class="fm-city-karachi" data-city="karachi" style="cursor:pointer">
+          <circle class="fm-pulse" cx="${KARACHI_MM.x}" cy="${KARACHI_MM.y}" r="2"/>
+          <circle class="fm-dot" cx="${KARACHI_MM.x}" cy="${KARACHI_MM.y}" r="3"/>
+          <text class="fm-label" x="${KARACHI_MM.x}" y="${KARACHI_MM.y + 13}" text-anchor="middle">KARACHI</text>
+          <circle class="fm-hit" cx="${KARACHI_MM.x}" cy="${KARACHI_MM.y}" r="22" fill="transparent"/>
+        </g>
+
+        <!-- plane -->
+        <g class="fm-plane-wrap">
+          <path class="fm-plane" d="M 0,0 L -6,3 L -2,3 L -4,7 L -1,7 L 2,4 L 6,4 L 8,2 L 6,0 L 2,0 L -1,-4 L -4,-4 L -2,0 L -6,0 Z" transform="translate(${LONDON_MM.x}, ${LONDON_MM.y}) rotate(45)"/>
+        </g>
+
+        <!-- bubble -->
+        <g class="fm-bubble-group" transform="translate(0,0)">
+          <rect class="fm-bubble-bg" x="0" y="0" width="260" height="96" rx="7"/>
+          <text class="fm-bubble-text title" x="14" y="30">—</text>
+          <text class="fm-bubble-text fm-line1" x="14" y="60">—</text>
+          <text class="fm-bubble-text fm-line2" x="14" y="84">—</text>
+        </g>
+      </svg>
+    `;
+  }
+
+  // Animate SVG viewBox (zoom/pan)
+  function animateViewBox(svg, target, duration) {
+    return new Promise(resolve => {
+      const current = svg.getAttribute('viewBox').split(' ').map(parseFloat);
+      const start = { x: current[0], y: current[1], w: current[2], h: current[3] };
+      const t0 = performance.now();
+      function step(now) {
+        const t = Math.min(1, (now - t0) / duration);
+        const e = t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2;
+        const x = start.x + (target.x - start.x) * e;
+        const y = start.y + (target.y - start.y) * e;
+        const w = start.w + (target.w - start.w) * e;
+        const h = start.h + (target.h - start.h) * e;
+        svg.setAttribute('viewBox', `${x} ${y} ${w} ${h}`);
+        if (t < 1) requestAnimationFrame(step); else resolve();
+      }
+      requestAnimationFrame(step);
+    });
+  }
+
+  // Build a viewBox centered on a point with a given zoom level (maintains 800x320 aspect)
+  function zoomBox(cx, cy, zoom) {
+    const w = 800 / zoom;
+    const h = 320 / zoom;
+    let x = Math.max(0, Math.min(800 - w, cx - w/2));
+    let y = Math.max(0, Math.min(320 - h, cy - h/2));
+    return { x, y, w, h };
+  }
+
+  // Fit two points with padding, maintaining aspect ratio
+  function fitTwo(a, b, pad) {
+    const minX = Math.min(a.x, b.x) - pad;
+    const maxX = Math.max(a.x, b.x) + pad;
+    const minY = Math.min(a.y, b.y) - pad;
+    const maxY = Math.max(a.y, b.y) + pad;
+    let w = maxX - minX, h = maxY - minY;
+    const ratio = 800/320;
+    if (w/h < ratio) w = h * ratio;
+    else h = w / ratio;
+    const cx = (minX+maxX)/2, cy = (minY+maxY)/2;
+    return { x: cx - w/2, y: cy - h/2, w, h };
+  }
+
+  const FULL_MM_VIEW = { x: 0, y: 0, w: 800, h: 320 };
+
+  // Animate the route inside a card's flight map
+  async function playFlightMap(card) {
+    buildFlightMap(card);
+    const container = card.querySelector('.flight-map');
+    const svg = container.querySelector('svg');
+    const seg1 = svg.querySelector('.fm-seg1');
+    const seg2 = svg.querySelector('.fm-seg2');
+    const planeEl = svg.querySelector('.fm-plane');
+    const bubble = svg.querySelector('.fm-bubble-group');
+    const bubbleBg = svg.querySelector('.fm-bubble-bg');
+    const bubbleTitle = svg.querySelector('.fm-bubble-text.title');
+    const bubbleLine1 = svg.querySelector('.fm-line1');
+    const bubbleLine2 = svg.querySelector('.fm-line2');
+
+    const stopX = parseFloat(card.dataset.stopX);
+    const stopY = parseFloat(card.dataset.stopY);
+    const STOP = { x: stopX, y: stopY };
+    const data = {
+      departInfo: card.dataset.departInfo,
+      stopInfo: card.dataset.stopInfo,
+      layover: card.dataset.layover,
+      arriveInfo: card.dataset.arriveInfo,
+      outDur: card.dataset.outDur,
+      stopName: card.dataset.stopName
+    };
+
+    // Reset everything
+    seg1.style.opacity = '0'; seg2.style.opacity = '0';
+    seg1.setAttribute('d', ''); seg2.setAttribute('d', '');
+    bubble.classList.remove('visible');
+    setPlane(planeEl, LONDON_MM.x, LONDON_MM.y, 45);
+    svg.setAttribute('viewBox', '0 0 800 320');
+
+    await wait(300);
+
+    // 1. Zoom in on London
+    await animateViewBox(svg, zoomBox(LONDON_MM.x, LONDON_MM.y, 2.4), 800);
+
+    // 2. Show departure bubble
+    showFmBubble(bubble, bubbleBg, bubbleTitle, bubbleLine1, bubbleLine2,
+      LONDON_MM.x, LONDON_MM.y, 'DEPART', data.departInfo, '', svg);
+    await wait(1500);
+    bubble.classList.remove('visible');
+    await wait(200);
+
+    // 3. Pan/zoom out to fit London + Stopover, draw segment 1
+    await Promise.all([
+      animateViewBox(svg, fitTwo(LONDON_MM, STOP, 50), 1000),
+      drawSegment(seg1, LONDON_MM, STOP, 1000)
+    ]);
+
+    // 4. Fly plane to stopover
+    await flyAlongMini(planeEl, LONDON_MM, STOP, 1600);
+
+    // 5. Zoom into stopover
+    await animateViewBox(svg, zoomBox(stopX, stopY, 2.4), 700);
+
+    // 6. Stopover bubble
+    showFmBubble(bubble, bubbleBg, bubbleTitle, bubbleLine1, bubbleLine2,
+      stopX, stopY, data.stopName, data.stopInfo, `+${data.layover}`, svg);
+    await wait(1800);
+    bubble.classList.remove('visible');
+    await wait(200);
+
+    // 7. Pan/zoom to fit Stopover + Karachi, draw segment 2
+    await Promise.all([
+      animateViewBox(svg, fitTwo(STOP, KARACHI_MM, 50), 1000),
+      drawSegment(seg2, STOP, KARACHI_MM, 1000)
+    ]);
+
+    // 8. Fly to Karachi
+    await flyAlongMini(planeEl, STOP, KARACHI_MM, 1600);
+
+    // 9. Zoom into Karachi
+    await animateViewBox(svg, zoomBox(KARACHI_MM.x, KARACHI_MM.y, 2.4), 700);
+
+    // 10. Arrival bubble
+    showFmBubble(bubble, bubbleBg, bubbleTitle, bubbleLine1, bubbleLine2,
+      KARACHI_MM.x, KARACHI_MM.y, 'ARRIVE', data.arriveInfo, `${data.outDur} total`, svg);
+    await wait(2000);
+    bubble.classList.remove('visible');
+    await wait(200);
+
+    // 11. Zoom back out to full route view (locked complete route)
+    seg1.setAttribute('d', curvedPath(LONDON_MM, STOP));
+    seg2.setAttribute('d', curvedPath(STOP, KARACHI_MM));
+    seg1.style.transition = 'none'; seg1.style.strokeDasharray = 'none'; seg1.style.strokeDashoffset = '0'; seg1.style.opacity = '1';
+    seg2.style.transition = 'none'; seg2.style.strokeDasharray = 'none'; seg2.style.strokeDashoffset = '0'; seg2.style.opacity = '1';
+    await animateViewBox(svg, FULL_MM_VIEW, 1000);
+
+    // 12. Wire up tappable dots so user can re-show any city's bubble
+    enableCityTaps(svg, card, data, STOP, bubble, bubbleBg, bubbleTitle, bubbleLine1, bubbleLine2);
+  }
+
+  function enableCityTaps(svg, card, data, STOP, bubble, bubbleBg, bubbleTitle, bubbleLine1, bubbleLine2) {
+    const cities = svg.querySelectorAll('.fm-city-london, .fm-city-stop, .fm-city-karachi');
+    let currentBubbleCity = null;
+
+    cities.forEach(g => {
+      const cityKey = g.dataset.city;
+      // Remove any previous listeners by cloning + replacing
+      const newG = g.cloneNode(true);
+      g.parentNode.replaceChild(newG, g);
+
+      newG.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        // Toggle off if same city tapped
+        if (currentBubbleCity === cityKey) {
+          bubble.classList.remove('visible');
+          await animateViewBox(svg, FULL_MM_VIEW, 600);
+          currentBubbleCity = null;
+          return;
+        }
+        currentBubbleCity = cityKey;
+
+        // Determine target city coords and bubble content
+        let cx, cy, title, line1, line2;
+        if (cityKey === 'london') {
+          cx = LONDON_MM.x; cy = LONDON_MM.y;
+          title = 'DEPART'; line1 = data.departInfo; line2 = '';
+        } else if (cityKey === 'stop') {
+          cx = STOP.x; cy = STOP.y;
+          title = data.stopName; line1 = data.stopInfo; line2 = `+${data.layover}`;
+        } else {
+          cx = KARACHI_MM.x; cy = KARACHI_MM.y;
+          title = 'ARRIVE'; line1 = data.arriveInfo; line2 = `${data.outDur} total`;
+        }
+
+        bubble.classList.remove('visible');
+        await animateViewBox(svg, zoomBox(cx, cy, 2.4), 600);
+        showFmBubble(bubble, bubbleBg, bubbleTitle, bubbleLine1, bubbleLine2,
+          cx, cy, title, line1, line2, svg);
+      });
+    });
+
+    // Tap empty map area to dismiss bubble and zoom back to full view
+    svg.addEventListener('click', async (e) => {
+      const tappedCity = e.target.closest('.fm-city-london, .fm-city-stop, .fm-city-karachi');
+      if (tappedCity) return;
+      if (currentBubbleCity) {
+        bubble.classList.remove('visible');
+        await animateViewBox(svg, FULL_MM_VIEW, 600);
+        currentBubbleCity = null;
+      }
+    });
+  }
+
+  function setPlane(planeEl, x, y, rot) {
+    planeEl.style.transition = 'none';
+    planeEl.setAttribute('transform', `translate(${x}, ${y}) rotate(${rot})`);
+  }
+
+  function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  function drawSegment(pathEl, from, to, duration) {
+    return new Promise(resolve => {
+      const d = curvedPath(from, to);
+      pathEl.setAttribute('d', d);
+      pathEl.style.opacity = '1';
+      const len = pathEl.getTotalLength();
+      pathEl.style.transition = 'none';
+      pathEl.style.strokeDasharray = `${len} ${len}`;
+      pathEl.style.strokeDashoffset = len;
+      void pathEl.getBoundingClientRect();
+      pathEl.style.transition = `stroke-dashoffset ${duration}ms ease`;
+      pathEl.style.strokeDashoffset = 0;
+      setTimeout(() => {
+        pathEl.style.transition = 'none';
+        pathEl.style.strokeDasharray = 'none';
+        pathEl.style.strokeDashoffset = 0;
+        resolve();
+      }, duration + 40);
+    });
+  }
+
+  function flyAlongMini(planeEl, a, b, duration) {
+    const c = controlPoint(a, b, 0.18);
+    return new Promise(resolve => {
+      const start = performance.now();
+      function step(now) {
+        const t = Math.min(1, (now - start) / duration);
+        const e = t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2;
+        const p = bezierPoint(a, c, b, e);
+        const rot = bezierTangent(a, c, b, e) + 45;
+        planeEl.setAttribute('transform', `translate(${p.x}, ${p.y}) rotate(${rot})`);
+        if (t < 1) requestAnimationFrame(step); else resolve();
+      }
+      requestAnimationFrame(step);
+    });
+  }
+
+  function showFmBubble(bubble, bg, title, l1, l2, x, y, t, ll1, ll2, svg) {
+    // Read current viewBox to scale bubble inversely (so it stays readable when zoomed in)
+    const vb = svg.getAttribute('viewBox').split(' ').map(parseFloat);
+    const zoom = 800 / vb[2];        // 1 = full map, 2 = 2x zoom etc
+    const scale = 1 / zoom;          // inverse: shrink bubble when zoomed in
+
+    const w = 260, h = ll2 ? 96 : 64;
+    // Position bubble offset from the point, in current viewBox coords
+    let bx = x + 8 * scale;
+    if (bx + w * scale > vb[0] + vb[2]) bx = x - (w + 8) * scale;
+    let by = y - (h + 8) * scale;
+    if (by < vb[1]) by = y + 8 * scale;
+
+    bubble.setAttribute('transform', `translate(${bx}, ${by}) scale(${scale})`);
+    bg.setAttribute('height', h);
+    title.textContent = t;
+    l1.textContent = ll1 || '';
+    l2.textContent = ll2 || '';
+    bubble.classList.add('visible');
+  }
+
+  // ============================================
+  // CARD EXPAND
+  // ============================================
+  let activeCard = null;
+  document.querySelectorAll('.card').forEach(card => {
+    const summary = card.querySelector('.card-summary');
+    summary.addEventListener('click', (e) => {
+      if (e.target.tagName === 'A') return;
+      if (activeCard === card) {
+        card.classList.remove('expanded');
+        activeCard = null;
+        return;
+      }
+      document.querySelectorAll('.card.expanded').forEach(c => c.classList.remove('expanded'));
+      card.classList.add('expanded');
+      activeCard = card;
+
+      setTimeout(() => {
+        const rect = card.getBoundingClientRect();
+        if (rect.top < 60 || rect.bottom > window.innerHeight)
+          card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+
+      // wait for body to expand, then play the animation
+      setTimeout(() => playFlightMap(card), 350);
+    });
+  });
+
+  // ============================================
+  // FILTERS
+  // ============================================
+  document.querySelectorAll('.pill').forEach(p => {
+    p.addEventListener('click', () => {
+      document.querySelectorAll('.pill').forEach(x => x.classList.remove('active'));
+      p.classList.add('active');
+      const f = p.dataset.filter;
+      document.querySelectorAll('.card').forEach(c => {
+        if (f === 'all') c.classList.remove('hidden');
+        else {
+          const tags = (c.dataset.tags || '').split(' ');
+          c.classList.toggle('hidden', !tags.includes(f));
+        }
+      });
+    });
+  });
+</script>
+</body>
+</html>
